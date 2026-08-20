@@ -1,38 +1,46 @@
+//! CLI tool entrypoint for compiling directory/directories of images into grid collages.
+
 use anyhow::Context;
 use clap::Parser;
 use crabgrid::canvas::{Canvas, Columns, Dimensions, Gaps, ImageCount};
 use std::path::Path;
 
+/// Command-line arguments for the `crabgrid` binary.
 #[derive(Parser, Debug, Clone)]
-#[command(version, about = "Creates a grid collage that is very nifty for documentation in lab experiments.", long_about = None)]
+#[command(
+    version,
+    about = "Creates a grid collage suitable for visual documentation and lab experiments.",
+    long_about = None
+)]
 struct Cli {
     /// Number of columns in the collage grid.
     #[arg(short, long, default_value_t = 5)]
     columns: u32,
 
-    /// The dimensions of every image in the collage.
+    /// The target dimensions for every image cell in the collage (e.g., "300x300").
     #[arg(short, long, default_value_t = "300x300".into())]
     dimension: String,
 
-    /// Gaps between images and the padding around the entire collage.
+    /// Gaps between images and padding around the collage, in pixels.
     #[arg(short, long, default_value_t = 2)]
     gaps: u32,
 
-    /// Compile multiple directories at once.
+    /// Compile multiple subdirectories inside the input directory at once.
     #[arg(short, long)]
     multi_directory: bool,
 
-    /// Input directory. Or directory of multiple input directories in the case of multi-directory mode.
+    /// Path to the input directory (or the parent directory when running in multi-directory mode).
     input: String,
 
-    /// Output file. Or output directory in the case of multi-directory mode.
+    /// Path to the output file (or the destination folder when running in multi-directory mode).
     output: String,
 }
 
+/// Reads image files from the specified directory, resizes them, arranges them into
+/// a grid layout, and saves the final collage to the output path.
 fn compile_images(cli: &Cli, input: &Path, output: &Path) -> anyhow::Result<()> {
-    let directory = Path::new(input);
-
-    let mut image_list: Vec<_> = std::fs::read_dir(directory)?
+    // Collect all supported image files in the directory and sort them alphabetically.
+    let mut image_list: Vec<_> = std::fs::read_dir(input)?
         .filter_map(|entry| entry.ok())
         .map(|entry| entry.path())
         .filter(|path| is_image_file(path))
@@ -40,8 +48,9 @@ fn compile_images(cli: &Cli, input: &Path, output: &Path) -> anyhow::Result<()> 
 
     image_list.sort();
 
-    let dimen = cli.dimension.to_uppercase().clone();
-    let mut split_dimen = dimen.split("X");
+    // Parse the image dimension string (e.g. "300X300").
+    let dimen = cli.dimension.to_uppercase();
+    let mut split_dimen = dimen.split('X');
     let width = split_dimen
         .next()
         .context("Invalid width dimension")?
@@ -58,17 +67,19 @@ fn compile_images(cli: &Cli, input: &Path, output: &Path) -> anyhow::Result<()> 
         Gaps(cli.gaps),
     );
 
+    // Append each image to the canvas grid sequentially.
     for image_path in image_list {
-        let image = image::open(image_path).unwrap();
-
+        let image = image::open(image_path).context("Failed to open image file")?;
         canvas.append_image(&image);
     }
 
-    canvas.write_to_file(output).unwrap();
+    // Write the compiled grid collage to the filesystem.
+    canvas.write_to_file(output).context("Failed to save the collage image")?;
 
     Ok(())
 }
 
+/// Helper function to determine if a file is a supported image type based on its extension.
 fn is_image_file(path: &Path) -> bool {
     path.extension()
         .and_then(|ext| ext.to_str())
@@ -84,27 +95,17 @@ fn main() -> anyhow::Result<()> {
     if cli.multi_directory {
         let main_directory = Path::new(&cli.input);
 
-        main_directory
-            .read_dir()?
-            .filter_map(|entry| entry.ok())
-            .filter(|entry| {
-                if let Ok(file_type) = entry.file_type() {
-                    return file_type.is_dir();
-                }
-                false
-            })
-            .for_each(|directory| {
-                compile_images(
-                    &cli,
-                    &directory.path(),
-                    Path::new(&format!(
-                        "{}/{}.jpg",
-                        &cli.output,
-                        directory.file_name().into_string().unwrap()
-                    )),
-                )
-                .unwrap();
-            });
+        // Iterate through all subdirectories in the main directory.
+        for entry in main_directory.read_dir()? {
+            let entry = entry?;
+            if entry.file_type()?.is_dir() {
+                let dir_path = entry.path();
+                let dir_name = entry.file_name().into_string().unwrap_or_default();
+                let output_path = Path::new(&cli.output).join(format!("{}.jpg", dir_name));
+                
+                compile_images(&cli, &dir_path, &output_path)?;
+            }
+        }
 
         return Ok(());
     }
