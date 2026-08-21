@@ -19,6 +19,13 @@ cargo build --release
 
 The compiled binary will be available at `target/release/crabgrid`.
 
+If you have `cargo-binstall`, you can install `crabgrid` from pre-compiled binaries.
+
+```bash
+cargo binstall crabgrid
+  
+```
+
 ## Usage
 
 ### Command-Line Interface
