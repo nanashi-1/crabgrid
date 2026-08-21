@@ -2,11 +2,17 @@
 name = "crabgrid"
 description = "Creates a grid collage, neat for laboratory documentation."
 license = "GPL-3.0-only"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
+repository = "https://github.com/nanashi-1/crabgrid"
 
 [dependencies]
 anyhow = "1.0.104"
 clap = { version = "4.6.6", features = ["derive"] }
 image = "0.25.10"
 thiserror = "2.0.20"
+
+[package.metadata.binstall]
+pkg-url = "{ repo }/releases/download/v{ version }/{ name }-{ target }.{ archive-suffix }"
+bin-dir = "{ bin }{ binary-ext }"
+pkg-fmt = "bin" 
