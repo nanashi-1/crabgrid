@@ -2,7 +2,7 @@
 name = "crabgrid"
 description = "Creates a grid collage, neat for laboratory documentation."
 license = "GPL-3.0-only"
-version = "0.1.4"
+version = "0.1.5"
 edition = "2024"
 repository = "https://github.com/nanashi-1/crabgrid"
 
