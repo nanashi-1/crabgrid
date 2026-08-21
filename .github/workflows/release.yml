@@ -1,31 +1,38 @@
-name: Manual Release
+name: Manual Release (Binstall Compatible)
 
 on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'v0.0.1'
+        description: 'Version tag to release (e.g., v1.0.0)'
         required: true
         type: string
 
+permissions:
+  contents: write
+
 jobs:
   build:
-    name: Build CLI
+    name: Build & Package
     strategy:
       matrix:
         include:
           - os: windows-latest
             target: x86_64-pc-windows-msvc
-            artifact_name: crabgrid-windows.exe
+            bin_name: crabgrid.exe
+            archive_name: crabgrid-x86_64-pc-windows-msvc.zip
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-            artifact_name: crabgrid-linux
+            bin_name: crabgrid
+            archive_name: crabgrid-x86_64-unknown-linux-gnu.tar.gz
           - os: macos-latest
             target: aarch64-apple-darwin
-            artifact_name: crabgrid-apple-arm
-          - os: macos-13 # Intel Mac
+            bin_name: crabgrid
+            archive_name: crabgrid-aarch64-apple-darwin.tar.gz
+          - os: macos-13
             target: x86_64-apple-darwin
-            artifact_name: crabgrid-apple-intel
+            bin_name: crabgrid
+            archive_name: crabgrid-x86_64-apple-darwin.tar.gz
 
     runs-on: ${{ matrix.os }}
 
@@ -41,28 +48,43 @@ jobs:
       - name: Build Binary
         run: cargo build --release --target ${{ matrix.target }}
 
-      - name: Upload Artifacts
+      # Package the binary into the root of the archive file
+      - name: Create Archive (Windows)
+        if: matrix.os == 'windows-latest'
+        run: |
+          cd target/${{ matrix.target }}/release
+          7z a ../../../${{ matrix.archive_name }} ${{ matrix.bin_name }}
+
+      - name: Create Archive (Unix)
+        if: matrix.os != 'windows-latest'
+        run: |
+          cd target/${{ matrix.target }}/release
+          tar -czf ../../../${{ matrix.archive_name }} ${{ matrix.bin_name }}
+
+      - name: Upload Artifacts to Job
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.artifact_name }}
-          path: target/${{ matrix.target }}/release/${{ matrix.artifact_name == 'my-cli-windows.exe' && 'my-cli.exe' || 'my-cli' }}
+          name: ${{ matrix.target }}-archive
+          path: ${{ matrix.archive_name }}
 
   create-release:
     name: Create GitHub Release
     needs: build
     runs-on: ubuntu-latest
     steps:
-      - name: Download all artifacts
+      - name: Download all job artifacts
         uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
 
       - name: Create Release and Upload Files
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.event.inputs.version }}
           files: |
-            windows/crabgrid.exe
-            linux/crabgrid
-            apple-arm/crabgrid
-            apple-intel/crabgrid
+            crabgrid-x86_64-pc-windows-msvc.zip
+            crabgrid-x86_64-unknown-linux-gnu.tar.gz
+            crabgrid-aarch64-apple-darwin.tar.gz
+            crabgrid-x86_64-apple-darwin.tar.gz
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
