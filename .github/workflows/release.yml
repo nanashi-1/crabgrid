@@ -29,10 +29,6 @@ jobs:
             target: aarch64-apple-darwin
             bin_name: crabgrid
             archive_name: crabgrid-aarch64-apple-darwin.tar.gz
-          - os: macos-13
-            target: x86_64-apple-darwin
-            bin_name: crabgrid
-            archive_name: crabgrid-x86_64-apple-darwin.tar.gz
 
     runs-on: ${{ matrix.os }}
 
@@ -85,6 +81,5 @@ jobs:
             crabgrid-x86_64-pc-windows-msvc.zip
             crabgrid-x86_64-unknown-linux-gnu.tar.gz
             crabgrid-aarch64-apple-darwin.tar.gz
-            crabgrid-x86_64-apple-darwin.tar.gz
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
