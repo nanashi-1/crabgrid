@@ -2,7 +2,7 @@
 name = "crabgrid"
 description = "Creates a grid collage, neat for laboratory documentation."
 license = "GPL-3.0-only"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2024"
 repository = "https://github.com/nanashi-1/crabgrid"
 
@@ -14,5 +14,8 @@ thiserror = "2.0.20"
 
 [package.metadata.binstall]
 pkg-url = "{ repo }/releases/download/v{ version }/{ name }-{ target }.{ archive-suffix }"
-bin-dir = "{ bin }{ binary-ext }"
-pkg-fmt = "bin" 
+bin-dir = "{ name }-{ target }.{ archive-suffix }/{ bin }{ binary-ext }"
+pkg-fmt = "tgz" 
+
+[package.metadata.binstall.overrides.x86_64-pc-windows-msvc]
+pkg-fmt = "zip"
