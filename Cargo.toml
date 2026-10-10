@@ -2,7 +2,7 @@
 name = "crabgrid"
 description = "Creates a grid collage, neat for laboratory documentation."
 license = "GPL-3.0-only"
-version = "0.1.5"
+version = "0.1.6"
 edition = "2024"
 repository = "https://github.com/nanashi-1/crabgrid"
 
@@ -10,6 +10,7 @@ repository = "https://github.com/nanashi-1/crabgrid"
 anyhow = "1.0.104"
 clap = { version = "4.6.6", features = ["derive"] }
 image = "0.25.10"
+kamadak-exif = "0.6.1"
 thiserror = "2.0.20"
 
 [package.metadata.binstall]
