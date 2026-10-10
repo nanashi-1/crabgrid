@@ -3,7 +3,7 @@
 use anyhow::Context;
 use clap::Parser;
 use crabgrid::canvas::{Canvas, Columns, Dimensions, Gaps, ImageCount};
-use std::path::Path;
+use std::{fs::File, io::BufReader, path::Path};
 
 /// Command-line arguments for the `crabgrid` binary.
 #[derive(Parser, Debug, Clone)]
@@ -69,12 +69,38 @@ fn compile_images(cli: &Cli, input: &Path, output: &Path) -> anyhow::Result<()> 
 
     // Append each image to the canvas grid sequentially.
     for image_path in image_list {
-        let image = image::open(image_path).context("Failed to open image file")?;
-        canvas.append_image(&image);
+        let image = image::open(&image_path).context("Failed to open image file")?;
+        let file = File::open(&image_path).unwrap();
+
+        let mut buf = BufReader::new(file);
+
+        if let Ok(exif_data) = exif::Reader::new().read_from_container(&mut buf) {
+            if let Some(exif_data) = exif_data.get_field(exif::Tag::Orientation, exif::In::PRIMARY)
+            {
+                let image = match exif_data.value.get_uint(0).unwrap() {
+                    2 => image.fliph(),
+                    3 => image.rotate180(),
+                    4 => image.flipv(),
+                    5 => image.rotate90().fliph(),
+                    6 => image.rotate90(),
+                    7 => image.rotate270().fliph(),
+                    8 => image.rotate270(),
+                    _ => image,
+                };
+
+                canvas.append_image(&image);
+            } else {
+                canvas.append_image(&image);
+            }
+        } else {
+            canvas.append_image(&image);
+        }
     }
 
     // Write the compiled grid collage to the filesystem.
-    canvas.write_to_file(output).context("Failed to save the collage image")?;
+    canvas
+        .write_to_file(output)
+        .context("Failed to save the collage image")?;
 
     Ok(())
 }
@@ -102,7 +128,7 @@ fn main() -> anyhow::Result<()> {
                 let dir_path = entry.path();
                 let dir_name = entry.file_name().into_string().unwrap_or_default();
                 let output_path = Path::new(&cli.output).join(format!("{}.jpg", dir_name));
-                
+
                 compile_images(&cli, &dir_path, &output_path)?;
             }
         }
